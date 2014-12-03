@@ -1,0 +1,8 @@
+# $Id: DOT_inputrc,v 2.2 2007/10/29 05:19:03 bburke Exp $
+set horizontal-scroll-mode Off
+set show-all-if-ambiguous On
+set visible-stats On
+"\M-\e[D": backward-word
+"\033\033[D": backward-word
+"\M-\e[C": forward-word
+"\033\033[C": forward-word

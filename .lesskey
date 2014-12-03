@@ -1,0 +1,12 @@
+#line-edit
+^H	backspace
+^D	delete
+^E	end
+^A	home
+^K	kill-line
+^[d	word-delete
+^[^?	word-backspace
+
+#env
+LESS=-RiM
+LESSHISTFILE=-

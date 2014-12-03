@@ -1,0 +1,6 @@
+# $Id: DOT_nanorc,v 2.1 2006/08/24 20:07:46 bburke Exp $
+set nowrap
+set smooth
+set tabsize 4
+set const
+set regexp
