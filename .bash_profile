@@ -186,6 +186,8 @@ if [ "${PAGER##*/}" = "less" ] ; then
    alias less="less -RiM"
 fi
 alias ls="ls -F -r -t -h"
+alias ll="ls -l -a "
+alias lg="ll | grep -i"
 alias newer="find . -newerct"
 alias unixtime="date '+%s'"
 alias unixdate="date '+%s'"
@@ -194,6 +196,7 @@ alias dl="pushd ~/Downloads/"
 alias jdate="date '+%j %Z'; date -u '+%j %Z'"
 alias sdiff='diff --side-by-side -W $COLUMNS'
 alias line2null="tr '\n' '\0'" # very useful with xargs -0
+
 
 
 #
