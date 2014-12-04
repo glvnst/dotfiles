@@ -196,7 +196,7 @@ alias dl="pushd ~/Downloads/"
 alias jdate="date '+%j %Z'; date -u '+%j %Z'"
 alias sdiff='diff --side-by-side -W $COLUMNS'
 alias line2null="tr '\n' '\0'" # very useful with xargs -0
-
+alias ".."="pushd .." # bash only. zsh is cool like this
 
 
 #
