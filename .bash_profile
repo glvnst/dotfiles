@@ -190,14 +190,15 @@ alias ll="ls -l -a "
 alias lg="ll | grep -i"
 alias newer="find . -newerct"
 alias unixtime="date '+%s'"
-alias unixdate="date '+%s'"
+alias unixdate=unixtime
 alias dt="pushd ~/Desktop/"
 alias dl="pushd ~/Downloads/"
 alias jdate="date '+%j %Z'; date -u '+%j %Z'"
 alias sdiff='diff --side-by-side -W $COLUMNS'
 alias line2null="tr '\n' '\0'" # very useful with xargs -0
-alias ".."="pushd .." # bash only. zsh is cool like this
-
+alias ".."="pushd .." # bash only. zsh is already cool like this
+alias readcert="openssl x509 -text -issuer -subject -dates -hash -fingerprint -in"
+alias dumpcert=readcert
 
 #
 # Shell options
