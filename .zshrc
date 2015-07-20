@@ -174,7 +174,7 @@ setopt interactivecomments
 # User functions
 #
 if ! is_function chop; then
-    function chop() { 
+    function chop() {
         # this is a shell function instead of an alias so that $COLUMNS is
         # evaluated at runtime, so a changing window width is supported
         cut -c "1-$COLUMNS"
@@ -200,7 +200,7 @@ fi
 
 
 if ! is_function collect; then
-    function collect() { 
+    function collect() {
         # Check argument count, show help if incorrect
         if [[ ${#@} -lt 2 ]]; then
             echo "Usage: collect <directory> <file to mv to directory> ..." >&2;
@@ -225,7 +225,7 @@ fi
 
 
 if ! is_function collectd; then
-    function collectd() { 
+    function collectd() {
         # Check argument count, show help if incorrect
         if [[ ${#@} -lt 2 ]]; then
             echo "Usage: collect <directory> <file to mv to directory> ..." >&2;
@@ -251,7 +251,7 @@ if ! is_function concblock; then
     zmodload zsh/parameter
     zmodload zsh/zselect
 
-    function concblock () { 
+    function concblock () {
         CONC_MAX=${CONC_MAX:-2}
 
         # Block until there is an open slot
@@ -285,7 +285,7 @@ if ! is_function xconc; then
             group_size=$(( arg_count / CONC_MAX ));
             group_count=$CONC_MAX
         fi
-        
+
         remainder=$(( arg_count % (group_count * group_size) ))
 
         (
@@ -314,6 +314,47 @@ if ! is_function xconc; then
 fi
 
 
+if ! is_function bpython; then
+    bpython() {
+        if test -n "$VIRTUAL_ENV"
+        then
+            PYTHONPATH="$(python -c 'import sys; print ":".join(sys.path)')" \
+            command bpython "$@"
+        else
+            command bpython "$@"
+        fi
+    }
+fi
+
+
+if ! is_function venv; then
+    venv_hook() {
+        if declare -f $1 >/dev/null; then
+            echo "==> $1"
+            $1
+        fi
+    }
+
+    venv() {
+        if [[ -f venv/hooks.sh ]]; then
+            echo "Loading venv/hooks.sh"
+            source venv/hooks.sh
+        fi
+
+        if [[ -z "$VIRTUAL_ENV" ]]; then
+            echo "Activating virtualenv"
+            venv_hook venv_preactivate_hook
+            source venv/bin/activate
+            venv_hook venv_activate_hook
+        else
+            echo "Deactivating virtualenv"
+            venv_hook venv_deactivate_hook
+            deactivate
+            venv_hook venv_postdeactivate_hook
+        fi
+    }
+fi
+
 # Grab the common stuff
 if [[ -f ~/.profile_local ]]; then
     source ~/.profile_local
@@ -329,5 +370,5 @@ fi
 #
 # Cleanup
 #
-unset -v PATH_ITEMS 
+unset -v PATH_ITEMS
 unset -f is_function path_setup prog_search

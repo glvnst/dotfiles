@@ -65,8 +65,8 @@ prog_search() {
    return 0
 }
 
-build_ps1() 
-{ 
+build_ps1()
+{
    # The template
    local OUT=$PS1_TEMPLATE;
 
@@ -211,7 +211,7 @@ unset ignoreeof # Control-D to terminate a shell
 # User functions
 #
 if ! is_function chop; then
-   chop() { 
+   chop() {
       # this is a shell function instead of an alias so that $COLUMNS is
       # evaluated at runtime, so a changing window width is supported
       cut -c "1-$COLUMNS"
@@ -239,8 +239,8 @@ fi
 
 
 COLLECT_LAST=""
-collect () 
-{ 
+collect ()
+{
     # Check argument count, show help if incorrect
     if ((${#@} < 2)); then
         echo "Usage: collect <directory> <file to mv to directory> ..." 1>&2;
@@ -250,7 +250,7 @@ collect ()
 
     local directory=$1;
     shift;
-    
+
     # Make the directory if necessary
     if [ '!' -d "$directory" ]; then
         mkdir -p "$directory";
@@ -265,8 +265,8 @@ collect ()
 export -f collect
 
 
-collectd () 
-{ 
+collectd ()
+{
     # Check argument count, show help if incorrect
     if ((${#@} < 2)); then
         echo "Usage: collect <directory> <file to mv to directory> ..." 1>&2;
@@ -285,8 +285,8 @@ export -f collectd
 
 
 export CONC_MAX=2
-conc () 
-{ 
+conc ()
+{
     local -a procs=($(jobs -p));
     local proc_count=${#procs[@]};
 
@@ -301,8 +301,8 @@ conc ()
 export -f conc
 
 
-xconc () 
-{ 
+xconc ()
+{
     local command=$1;
     shift;
     local arg_count=${#@};
@@ -319,6 +319,52 @@ xconc ()
     )
 }
 export -f xconc
+
+
+if ! is_function bpython; then
+    bpython() {
+        if test -n "$VIRTUAL_ENV"
+        then
+            PYTHONPATH="$(python -c 'import sys; print ":".join(sys.path)')" \
+            command bpython "$@"
+        else
+            command bpython "$@"
+        fi
+    }
+    export -f bpython
+fi
+
+
+if ! is_function venv; then
+    venv_hook() {
+        if declare -f $1 >/dev/null; then
+            echo "==> $1"
+            $1
+        fi
+    }
+    export -f venv_hook
+
+
+    venv() {
+        if [[ -f venv/hooks.sh ]]; then
+            echo "Loading venv/hooks.sh"
+            source venv/hooks.sh
+        fi
+
+        if [[ -z "$VIRTUAL_ENV" ]]; then
+            echo "Activating virtualenv"
+            venv_hook venv_preactivate_hook
+            source venv/bin/activate
+            venv_hook venv_activate_hook
+        else
+            echo "Deactivating virtualenv"
+            venv_hook venv_deactivate_hook
+            deactivate
+            venv_hook venv_postdeactivate_hook
+        fi
+    }
+    export -f venv
+fi
 
 
 # Source the local settings file
