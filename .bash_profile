@@ -1,4 +1,5 @@
 #!/bin/bash
+# trying to make this stuff work with POSIX shell as much as possible
 
 #
 # plumbing
@@ -15,6 +16,11 @@ _import() {
 
 _isfunc() {
   [ "$(type -t "$1")" = "function" ]
+  # here's some posix-compatible hackery i tested, but its ugly.
+  # _raw_type="$(type "$1")"
+  # _type_first_line="${_raw_type%%[!a-zA-Z0-9_\ ]*}"
+  # _type_last_word="${_type_first_line##* }"
+  # [ "$_type_last_word" = "function" ]
 }
 
 _print() {
@@ -43,11 +49,10 @@ die() {
 # environment
 #
 
-# this is set on BSD and some LINUXes -- see environ(7)
-_ifndef USER "$(id -un)"
-_ifndef HOSTNAME "$(hostname)"
-
+# special portable non-fancy handling for important values
 export PATH="$HOME/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:/usr/libexec"
+[ -n "$USER" ] || USER="$(id -un)"
+[ -n "$HOSTNAME" ] || HOSTNAME="$(hostname)"
 
 # make our selections but still allow the imported files below to have control
 unset \
@@ -75,7 +80,7 @@ _ifndef TZ "Europe/Brussels"
 #
 
 # make terminal window size changes work better
-shopt -s checkwinsize || warn "warn shopt cmd failed"
+shopt -s checkwinsize 2>/dev/null || warn "warn shopt cmd failed"
 
 # enable Control-D to terminate the shell
 unset ignoreeof || warn "unset failed"
@@ -90,12 +95,12 @@ if [ "${PAGER##*/}" = "less" ] ; then
 fi
 
 alias \
-  "..=pushd    .." \
-  "...=pushd   ../.." \
-  "....=pushd  ../../.." \
-  ".....=pushd ../../../.." \
-  "dl=pushd ~/Downloads/" \
-  "dt=pushd ~/Desktop/" \
+  "..=cd .." \
+  "...=cd ../.." \
+  "....=cd ../../.." \
+  ".....=cd ../../../.." \
+  "dl=cd ~/Downloads/" \
+  "dt=cd ~/Desktop/" \
   "gits=git status" \
   "lg=ll | grep -i" \
   "ll=ls -l -a " \
@@ -138,7 +143,7 @@ if ! _isfunc chop; then
    chop() {
       # this is a shell function instead of an alias so that $COLUMNS is
       # evaluated at runtime, so a changing window width is supported
-      cut -c "1-$COLUMNS"
+      cut -c "1-${COLUMNS}"
    }
 fi
 
