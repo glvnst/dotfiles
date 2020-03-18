@@ -1,382 +1,271 @@
 #!/bin/bash
 
-
 #
-# Basic settings
+# plumbing
 #
-PS1_TEMPLATE="\D{%j %H:%M:%S} \u<b>@</b>\h<b>:</b>\w <b>\$</b> "
-LOCAL_SETTINGS_FILES=("$HOME/.profile_local" "$HOME/.bash_local")
-PATH_ITEMS=(
-    "$HOME/bin"
-    "/bin"
-    "/usr/bin"
-    "/usr/share/bin"
-    "/usr/local/bin"
-    "/usr/contrib/bin"
-    "/usr/X11R6/bin"
 
-    "/sbin"
-    "/usr/sbin"
-    "/usr/share/sbin"
-    "/usr/local/sbin"
-    "/usr/contrib/sbin"
-    "/usr/X11R6/sbin"
-
-    "/usr/libexec"
-    "/usr/local/libexec"
-)
-
-
-#
-# Some plumbing
-#
-is_function() {
-   test "$(type -t $@)" == "function"
+_ifndef() {
+  eval "[ -n \"\$$1\" ]" || export "$1=$2"
 }
 
-path_setup() {
-    local -a output_dirs;
-    local dir;
-
-    for dir in "$@"; do
-        if [[ -n "${dir}" && -d "${dir}" ]]; then
-            output_dirs+=("$dir")
-        fi
-    done
-
-    local IFS=":"
-    echo "${output_dirs[*]}"
+_import() {
+  # shellcheck source=/dev/null
+  [ -f "$1" ] && . "$1"
 }
 
-prog_search() {
-    local IFS=":"
-    local prog
-    local dir
-
-    for prog in "$@"; do
-        for dir in $PATH; do
-            if [ -x "${dir}/${prog}" ]; then
-                echo "${dir}/${prog}"
-                break 2
-            fi
-        done
-    done
-
-   return 0
+_isfunc() {
+  [ "$(type -t "$1")" = "function" ]
 }
 
-build_ps1()
-{
-   # The template
-   local OUT=$PS1_TEMPLATE;
-
-   # Expand <b>bold</b> tags
-   OUT=${OUT//<b>/'\[\e[97m\]'};
-   OUT=${OUT//<\/b>/'\[\e[39m\]'};
-
-   echo -E "${OUT}"
+_print() {
+  printf '%s\n' "$*"
 }
 
-fmt_duration() {
-    # takes a number of seconds and prints it in years, hours, minutes, seconds
-    # example usage:
-    # $ fmt_duration 35000000
-    # 1 year, 39 days, 20 hours, 13 minutes, 20 seconds
-    #
-    # Note: 1 year is treated as 365.25 days to account for "leap years"
-    local -r -a labels=('years' 'days' 'hours' 'minutes' 'seconds');
-    local -r -a increments=(31557600 86400 3600 60 1);
-    local i label increment quantity
-    local result=""
-    local seconds=${1:-0}
-
-    for ((i=0; i < ${#increments[@]}; i+=1)); do
-        increment=${increments[i]}
-        label=${labels[i]}
-
-        if [ $seconds -ge $increment ]; then
-            quantity=$((seconds / increment))
-            if [ $quantity -eq 1 ]; then
-                # Strip the "s" off the end for singular increments
-                label=${label:0:${#label}-1}
-            fi
-            seconds=$(( seconds - (quantity * increment) ))
-            result="${result} ${quantity} ${label},"
-        fi
-    done
-
-    if [ ${#result} -eq 0 ]; then
-        # "0 seconds" or 0 (whatever the final label is)
-        echo "0 ${labels[${#labels[@]} - 1]}"
-    else
-        # exclude the final extraneous comma
-        echo ${result:0:${#result}-1}
-    fi
+_run() {
+  "$@"
 }
 
+_printrun() {
+  _print "$@"
+  _run "$@"
+}
+
+warn() {
+  printf '%s %s\n' "$(date '+%FT%T')" "$*" >&2
+}
+
+die() {
+  warn "$* EXITING"
+  exit 1
+}
 
 #
-# Start setting things up
+# environment
 #
 
-# Establish the path environment variable
-PATH=$(path_setup "${PATH_ITEMS[@]}")
+# this is set on BSD and some LINUXes -- see environ(7)
+_ifndef USER "$(id -un)"
+_ifndef HOSTNAME "$(hostname)"
 
+export PATH="$HOME/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:/usr/libexec"
 
-# Setup the shell window updates
-if ! is_function pre_prompt; then
-   pre_prompt() {
-      # Update terminal window title
-      printf '\e]0;%s\a' "${HOME##*/}@${HOSTNAME}: ${PWD}"
+# make our selections but still allow the imported files below to have control
+unset \
+  EDITOR \
+  PAGER \
+  PS1
 
-      # If a command took more than ten seconds, report the time
-      local RUNTIME=$((SECONDS - PRE_EXEC_COMMAND_TIMER))
-      if [ $RUNTIME -gt 5 ]; then
-         echo "<< completed in $(fmt_duration $RUNTIME) >>"
-      fi
+_import ~/.bash_local
+_import ~/.profile_local
 
-      # Enable the pre_exec command
-      PRE_EXEC_ENABLE=1
-   }
-   export -f pre_prompt
-fi
+_ifndef EDITOR "nano"
+_ifndef FTP_PASSIVE_MODE "1"
+_ifndef HISTFILESIZE "0"
+_ifndef HISTTIMEFORMAT '%FT%T : '
+_ifndef PAGER "less"
+_ifndef PS1 "# ${USER}@${HOSTNAME}:\${PWD} \$ "
 
-if ! is_function pre_exec; then
-   pre_exec() {
-      # If we aren't "enabled", then we short-circuit
-      if test -z "$PRE_EXEC_ENABLE"; then
-         return
-      fi
-
-      # Update terminal window title
-      local last_command=`history 1`
-      printf '\e]0;%s\a' "${HOME##*/}@${HOSTNAME}:${PWD} ${last_command#*[[:digit:]] }"
-
-      # Disable the pre_exec function until the next prompt
-      # We do this because the debug trap gets caled before
-      # the command and after it
-      PRE_EXEC_ENABLE=""
-      PRE_EXEC_COMMAND_TIMER=$SECONDS
-   }
-fi
-
-export PRE_EXEC_COMMAND_TIMER=$SECONDS
-export PRE_EXEC_ENABLE=""
-export PROMPT_COMMAND="pre_prompt"
-trap pre_exec DEBUG
+_ifndef LANG "en_US.UTF-8"
+_ifndef LC_ALL "en_US.UTF-8"
+_ifndef TZ "Europe/Brussels"
 
 
 #
-# User variables
+# shell vars
 #
-export TZ=${TZ:-"US/Pacific"}
-export PAGER=$(prog_search less more)
-export EDITOR=${EDITOR:-$(prog_search nano vi emacs)}
-export FTP_PASSIVE_MODE=${FTP_PASSIVE_MODE:-"1"}
-export HISTSIZE=${HISTSIZE:-1500}
-export HISTFILESIZE=${HISTFILESIZE:-50}
-export HISTTIMEFORMAT=${HISTTIMEFORMAT:-"%j %H:%M:%S: "}
-export PS1=$(build_ps1)
+
+# make terminal window size changes work better
+shopt -s checkwinsize || warn "warn shopt cmd failed"
+
+# enable Control-D to terminate the shell
+unset ignoreeof || warn "unset failed"
 
 #
-# User aliases
+# aliases
 #
+
 if [ "${PAGER##*/}" = "less" ] ; then
    alias more="less -RiM"
    alias less="less -RiM"
 fi
-alias ls="ls -F -r -t -h"
-alias ll="ls -l -a "
-alias lg="ll | grep -i"
-alias newer="find . -newerct"
-alias unixtime="date '+%s'"
-alias unixdate=unixtime
-alias dt="pushd ~/Desktop/"
-alias dl="pushd ~/Downloads/"
-alias jdate="date '+%j %Z'; date -u '+%j %Z'"
-alias sdiff='diff --side-by-side -W $COLUMNS'
-alias line2null="tr '\n' '\0'" # very useful with xargs -0
-alias ".."="pushd .." # bash only. zsh is already cool like this
-alias readcert="openssl x509 -text -issuer -subject -dates -hash -fingerprint -in"
-alias dumpcert=readcert
 
+alias \
+  "..=pushd    .." \
+  "...=pushd   ../.." \
+  "....=pushd  ../../.." \
+  ".....=pushd ../../../.." \
+  "dl=pushd ~/Downloads/" \
+  "dt=pushd ~/Desktop/" \
+  "gits=git status" \
+  "lg=ll | grep -i" \
+  "ll=ls -l -a " \
+  "ls=ls -F -r -t -h" \
+  "newer=find . -newerct" \
+  "unixdate=date '+%s'" \
+  "unixtime=unixdate" \
+  "sl=ls" \
+  
+  
 #
-# Shell options
+# shell functions
 #
-shopt -s checkwinsize # make terminal window size changes work
-unset ignoreeof # Control-D to terminate a shell
 
+if ! _isfunc cdwd; then
+  cdwd() {
+    # cdwd: cd to the current working directory
+    #
+    # the wd can be deleted by automation, cdwd gets you back to what remains of it
+    # nobody@example.com:/Users/nobody $ mkdir -p one/two/three && cd one/two/three/
+    #
+    # now to pull the carpet out from under our feet...
+    # nobody@example.com:/Users/nobody/one/two/three $ (cd ~/one && rm -r two)
+    # nobody@example.com:/Users/nobody/one/two/three $ pwd
+    # /Users/nobody/one/two/three
+    # nobody@example.com:/Users/nobody/one/two/three $ ls ~/one
+    # nobody@example.com:/Users/nobody/one/two/three $ cdwd
+    # nobody@example.com:/Users/nobody/one $ pwd
+    # /Users/nobody/one
 
-#
-# User functions
-#
-if ! is_function chop; then
+    if [ -n "$1" ]; then
+      cd -- "$1" 2>/dev/null || cdwd "$(dirname "$1")"
+    else
+      cd "$PWD" 2>/dev/null || cdwd "$(dirname "$PWD")"
+    fi
+  }
+fi
+
+if ! _isfunc chop; then
    chop() {
       # this is a shell function instead of an alias so that $COLUMNS is
       # evaluated at runtime, so a changing window width is supported
       cut -c "1-$COLUMNS"
    }
-   export -f chop
 fi
 
+if ! _isfunc readcert; then
+  readcert() {
+    if [ -n "$*" ]; then
+      _action="_printrun"
+    else
+      warn "need a path to a cert to read/dump"
+      _action="_print"
+    fi
 
-if ! is_function loopthat; then
-   # this requires the watch program which is standard on ubuntu and available
-   # from homebrew
-   if type watch &>/dev/null ; then
-      loopthat()
-      {
-         local cmd=`fc -n -l -1`
-         local interval
+    $_action openssl x509 -text -issuer -subject -dates -hash -fingerprint -in
 
-         echo "Command is \"${cmd}\""
-         echo -n "How many seconds between iterations? : "
-         read -e interval
-         watch --interval=${interval} -- $cmd
-      }
-   fi
+    unset _action
+  }
 fi
 
+if ! _isfunc dumpcert; then
+  dumpcert() {
+    readcert "$@"
+  }
+fi
 
-COLLECT_LAST=""
-collect ()
-{
-    # Check argument count, show help if incorrect
-    if ((${#@} < 2)); then
-        echo "Usage: collect <directory> <file to mv to directory> ..." 1>&2;
-        echo "  * The directory will be created if it doesn't exist." 1>&2;
-        return 1;
-    fi;
+if ! _isfunc fmt_duration; then
+  fmt_duration() {
+    # documentation repeated here for copy/paste into other scripts
+    # takes a number of seconds and prints it in years, hours, minutes, seconds
+    #
+    # for example:
+    #   fmt_duration 35000000
+    # yields:
+    #   1 year, 39 days, 20 hours, 13 minutes, 20 seconds
+    #
+    # Note: by default 1 year is treated as 365.25 days to account for leap
+    # years
+    #
+    # You may optionally specify the labeled increments to use when formatting
+    # the duration. Use "singular/plural:seconds" for each increment. For
+    # example if you only want duration specified in days and hours use the
+    # increments day/days:86400 hour/hours:3600.
+    #
+    # The complete example call:
+    #   fmt_duration 1216567 day/days:86400 hour/hours:3600
+    # yields:
+    #   14 days, 1 hour
+    # 
+    # This function makes heavy use of POSIX shell Parameter Expansion for
+    # string manipulations, see:
+    # https://pubs.opengroup.org/onlinepubs/009695399/utilities/xcu_chap02.html
+    
+    _seconds=${1:-0}; shift
+    _labeled_increments=${*:-'year/years:31557600' \
+                            'day/days:86400' \
+                            'hour/hours:3600' \
+                            'minute/minutes:60' \
+                            'second/seconds:1'}
+    _result=""
 
-    local directory=$1;
-    shift;
+    for _increment in $_labeled_increments; do
+      _labels="${_increment%%:*}"
+      _increment="${_increment##*:}"
 
-    # Make the directory if necessary
-    if [ '!' -d "$directory" ]; then
-        mkdir -p "$directory";
-    fi;
+      _singular_label="${_labels%%/*}"
+      _plural_label="${_labels##*/}"
 
-    # Do the move
-    mv -i -- "$@" "$directory/";
-    COLLECT_LAST="$directory";
-
-    return 0
-}
-export -f collect
-
-
-collectd ()
-{
-    # Check argument count, show help if incorrect
-    if ((${#@} < 2)); then
-        echo "Usage: collect <directory> <file to mv to directory> ..." 1>&2;
-        echo "  * The directory will be created if it doesn't exist." 1>&2;
-        echo "  * After the mv, 'pushd <directory>' will be called." 1>&2;
-        return 1;
-    fi;
-
-    # collect, then cd to created directory
-    collect "$@";
-    pushd "$COLLECT_LAST";
-
-    return 0
-}
-export -f collectd
-
-
-export CONC_MAX=2
-conc ()
-{
-    local -a procs=($(jobs -p));
-    local proc_count=${#procs[@]};
-
-    # Block until there is an open slot
-    if ((proc_count >= CONC_MAX)); then
-        wait;
-    fi;
-
-    # Start our task
-    ( "$@" ) &
-}
-export -f conc
-
-
-xconc ()
-{
-    local command=$1;
-    shift;
-    local arg_count=${#@};
-    local group_size=$(( arg_count / CONC_MAX ));
-    local group_count=$(( (arg_count / group_size) + (arg_count % group_size ? 1 : 0) ));
-    (
-        local i;
-        local start;
-        for ((i = 0; i < group_count; i++ )); do
-            start=$(( (i * group_size) + 1 ));
-            conc "$command" "${@:$start:$group_size}";
-        done;
-        wait
-    )
-}
-export -f xconc
-
-
-if ! is_function bpython; then
-    bpython() {
-        if test -n "$VIRTUAL_ENV"
-        then
-            PYTHONPATH="$(python -c 'import sys; print ":".join(sys.path)')" \
-            command bpython "$@"
+      if [ "$_seconds" -ge "$_increment" ]; then
+        _quantity=$((_seconds / _increment))
+        if [ "$_quantity" -eq 1 ]; then
+          _label="$_singular_label"
         else
-            command bpython "$@"
+          _label="$_plural_label"
         fi
-    }
-    export -f bpython
+        _seconds=$(( _seconds - (_quantity * _increment) ))
+        _result="${_result}, ${_quantity} ${_label}"
+      fi
+    done
+
+    if [ -z "$_result" ]; then
+      _result="0 ${_label}"
+    fi
+
+    printf '%s\n' "${_result#*, }"
+
+    unset _increment _label _labeled_increments _labels _plural_label \
+      _quantity _result _seconds _singular_label >/dev/null 2>&1
+  }
 fi
-
-
-if ! is_function venv; then
-    venv_hook() {
-        if declare -f $1 >/dev/null; then
-            echo "==> $1"
-            $1
-        fi
-    }
-    export -f venv_hook
-
-
-    venv() {
-        if [[ -f venv/hooks.sh ]]; then
-            echo "Loading venv/hooks.sh"
-            source venv/hooks.sh
-        fi
-
-        if [[ -z "$VIRTUAL_ENV" ]]; then
-            echo "Activating virtualenv"
-            venv_hook venv_preactivate_hook
-            source venv/bin/activate
-            venv_hook venv_activate_hook
-        else
-            echo "Deactivating virtualenv"
-            venv_hook venv_deactivate_hook
-            deactivate
-            venv_hook venv_postdeactivate_hook
-        fi
-    }
-    export -f venv
-fi
-
-
-# Source the local settings file
-for SETTINGS_FILE in "${LOCAL_SETTINGS_FILES[@]}"; do
-  if [[ -a "$SETTINGS_FILE" ]]; then
-    source "$SETTINGS_FILE"
-  fi
-done
-
 
 #
-# Cleanup
+# prompts and window titles
 #
-unset -v PS1_TEMPLATE PATH_ITEMS LOCAL_SETTINGS_FILES SETTINGS_FILE
-unset -f is_function path_setup prog_search build_ps1
+
+# Setup the shell window updates
+if ! _isfunc pre_prompt; then
+  pre_prompt() {
+    _LAST_RUNTIME=$((SECONDS - _PRE_EXEC_SECONDS))
+
+    # Update terminal window title
+    printf '\e]0;%s\a' "${USER}@${HOSTNAME}:${PWD}"
+
+    # If a command took more than ten seconds, report the time
+    [ "$_LAST_RUNTIME" -gt 5 ] && echo "<< completed in $(fmt_duration $_LAST_RUNTIME) >>"
+
+    # Enable the pre_exec command
+    _PRE_EXEC_ENABLE=1
+  }
+fi
+
+if ! _isfunc pre_exec; then
+  pre_exec() {
+    # If we aren't "enabled", then we short-circuit
+    [ -n "$_PRE_EXEC_ENABLE" ] || return
+
+    # Update terminal window title
+    _last_command="$(history 1)"
+    printf '\e]0;%s\a' "${USER}@${HOSTNAME}:${PWD} # ${_last_command##*:}"
+
+    # Disable the pre_exec function until the next prompt
+    # We do this because the debug trap gets caled before
+    # the command and after it
+    _PRE_EXEC_ENABLE=""
+    _PRE_EXEC_SECONDS=$SECONDS
+   }
+fi
+
+_PRE_EXEC_SECONDS=$SECONDS
+_PRE_EXEC_ENABLE=""
+PROMPT_COMMAND="pre_prompt"
+trap pre_exec DEBUG
