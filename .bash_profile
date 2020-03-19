@@ -74,6 +74,7 @@ _ifndef LANG "en_US.UTF-8"
 _ifndef LC_ALL "en_US.UTF-8"
 _ifndef TZ "Europe/Brussels"
 
+[ -n "$COLUMNS" ] && export COLUMNS
 
 #
 # shell vars
@@ -83,7 +84,7 @@ _ifndef TZ "Europe/Brussels"
 shopt -s checkwinsize 2>/dev/null || warn "warn shopt cmd failed"
 
 # enable Control-D to terminate the shell
-unset ignoreeof || warn "unset failed"
+unset ignoreeof
 
 #
 # aliases
@@ -122,7 +123,7 @@ if ! _isfunc cdwd; then
     # the wd can be deleted by automation, cdwd gets you back to what remains of it
     # nobody@example.com:/Users/nobody $ mkdir -p one/two/three && cd one/two/three/
     #
-    # now to pull the carpet out from under our feet...
+    # now to pull the rug out from under our feet...
     # nobody@example.com:/Users/nobody/one/two/three $ (cd ~/one && rm -r two)
     # nobody@example.com:/Users/nobody/one/two/three $ pwd
     # /Users/nobody/one/two/three
@@ -229,7 +230,7 @@ if ! _isfunc fmt_duration; then
     printf '%s\n' "${_result#*, }"
 
     unset _increment _label _labeled_increments _labels _plural_label \
-      _quantity _result _seconds _singular_label >/dev/null 2>&1
+      _quantity _result _seconds _singular_label
   }
 fi
 
