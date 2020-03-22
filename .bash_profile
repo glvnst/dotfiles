@@ -171,7 +171,6 @@ fi
 
 if ! _isfunc fmt_duration; then
   fmt_duration() {
-    # documentation repeated here for copy/paste into other scripts
     # takes a number of seconds and prints it in years, hours, minutes, seconds
     #
     # for example:
@@ -224,7 +223,7 @@ if ! _isfunc fmt_duration; then
     done
 
     if [ -z "$_result" ]; then
-      _result="0 ${_label}"
+      _result="0 ${_plural_label}"
     fi
 
     printf '%s\n' "${_result#*, }"
