@@ -57,7 +57,12 @@ export PATH="$HOME/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/s
 # make our selections but still allow the imported files below to have control
 unset \
   EDITOR \
+  HISTFILE \
+  HISTFILESIZE \
+  LESSHISTFILE \
+  LESSHISTSIZE \
   PAGER \
+  PROMPT_COMMAND \
   PS1
 
 _import ~/.bash_local
@@ -67,6 +72,8 @@ _ifndef EDITOR "nano"
 _ifndef FTP_PASSIVE_MODE "1"
 _ifndef HISTFILESIZE "0"
 _ifndef HISTTIMEFORMAT '%FT%T : '
+_ifndef LESSHISTFILE "/dev/null"
+_ifndef LESSHISTSIZE "0"
 _ifndef PAGER "less"
 _ifndef PS1 "# ${USER}@${HOSTNAME}:\${PWD} \$ "
 
