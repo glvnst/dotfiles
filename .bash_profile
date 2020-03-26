@@ -171,6 +171,7 @@ fi
 
 if ! _isfunc fmt_duration; then
   fmt_duration() {
+    # documentation repeated here for copy/paste into other scripts
     # takes a number of seconds and prints it in years, hours, minutes, seconds
     #
     # for example:
@@ -178,23 +179,22 @@ if ! _isfunc fmt_duration; then
     # yields:
     #   1 year, 39 days, 20 hours, 13 minutes, 20 seconds
     #
-    # Note: by default 1 year is treated as 365.25 days to account for leap
-    # years
+    # Note: by default 1 year is treated as 365.25 days to account for leap years
     #
     # You may optionally specify the labeled increments to use when formatting
-    # the duration. Use "singular/plural:seconds" for each increment. For
-    # example if you only want duration specified in days and hours use the
-    # increments day/days:86400 hour/hours:3600.
+    # the duration. Use "singular/plural:seconds" for each increment. For example
+    # if you only want duration specified in days and hours use the increments
+    # day/days:86400 hour/hours:3600.
     #
     # The complete example call:
     #   fmt_duration 1216567 day/days:86400 hour/hours:3600
     # yields:
     #   14 days, 1 hour
-    # 
+    #
     # This function makes heavy use of POSIX shell Parameter Expansion for
     # string manipulations, see:
     # https://pubs.opengroup.org/onlinepubs/009695399/utilities/xcu_chap02.html
-    
+
     _seconds=${1:-0}; shift
     _labeled_increments=${*:-'year/years:31557600' \
                             'day/days:86400' \
