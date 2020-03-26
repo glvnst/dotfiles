@@ -10,14 +10,14 @@ filetype plugin on
 filetype indent on
 
 " Color Scheme
-if has("gui_running")
-	colors molokai
-	set background=dark
-else
-    set t_Co=256
-	colors molokai 
-	set background=dark
-endif
+"if has("gui_running")
+"	colors molokai
+"	set background=dark
+"else
+"  set t_Co=256
+"	colors molokai 
+"	set background=dark
+"endif
 
 " For syntax hilighting
 syntax on
