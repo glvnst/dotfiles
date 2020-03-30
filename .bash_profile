@@ -61,7 +61,6 @@ die() {
 #
 
 if ! _isfunc tprint; then
-
   tprint() {
     # Usage: tprint [-p|-n] spec message [...]
     # spec is one or more dash-separated keywords such as
@@ -303,7 +302,8 @@ if ! _isfunc pre_prompt; then
     printf '\e]0;%s\a' "${USER}@${HOSTNAME}:${PWD}"
 
     # If a command took more than ten seconds, report the time
-    [ "$_LAST_RUNTIME" -gt 5 ] && echo "<< completed in $(fmt_duration $_LAST_RUNTIME) >>"
+    [ "$_LAST_RUNTIME" -gt 5 ] \
+      && tprint dim-yellow-standout "# completed in $(fmt_duration $_LAST_RUNTIME)"
 
     # Enable the pre_exec command
     _PRE_EXEC_ENABLE=1
