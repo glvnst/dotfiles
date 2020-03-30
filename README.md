@@ -1,11 +1,9 @@
-# Profile
+# dotfiles
 
-These files make up my standard profile on unix machines and macs.
-
-I install them with:
+I install these with
 
 ```sh
-git clone https://github.com/glvnst/profile ~/.dotfiles \
+git clone https://github.com/glvnst/dotfiles ~/.dotfiles \
 && cd ~/.dotfiles \
 && make install \
 && cd ~ \
