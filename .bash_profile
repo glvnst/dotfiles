@@ -36,6 +36,127 @@ _printrun() {
   _run "$@"
 }
 
+tprint() {
+  # Usage: tprint [-p|-n] spec message [...]
+  # spec is one or more dash-separated keywords such as
+  # bright-underscore-magenta-bgblue
+  # messge is the message to print
+  # additional arguments will be concatenated into the message
+
+  # arg parse
+  while getopts "dnp" _opt; do
+    case "$_opt" in
+      'p')
+        _output_mode='bash-prompt'
+        ;;
+
+      'n')
+        _output_mode='no-newline'
+        ;;
+
+      'd')
+        _tprint_debug='1'
+        ;;
+
+      *)
+        exit 1
+    esac
+  done
+  shift $(( OPTIND - 1 ))
+  _spec="$1"; shift
+  _message="$*"
+
+  # init
+  _term_codes=''
+
+  # spec parse
+  _old_IFS="$IFS"
+  IFS="-"
+  for _keyword_item in \
+    'reset:0' \
+    'bright:1' \
+    'dim:2' \
+    'standout:3' \
+    'underscore:4' \
+    'blink:5' \
+    'reverse:6' \
+    'black:30' \
+    'red:31' \
+    'green:32' \
+    'yellow:33' \
+    'blue:34' \
+    'magenta:35' \
+    'cyan:36' \
+    'white:37' \
+    'default:38' \
+    'fgblack:30' \
+    'fgred:31' \
+    'fggreen:32' \
+    'fgyellow:33' \
+    'fgblue:34' \
+    'fgmagenta:35' \
+    'fgcyan:36' \
+    'fgwhite:37' \
+    'fgdefault:38' \
+    'bgblack:40' \
+    'bgred:41' \
+    'bggreen:42' \
+    'bgyellow:43' \
+    'bgblue:44' \
+    'bgmagenta:45' \
+    'bgcyan:46' \
+    'bgwhite:47' \
+    'bgdefault:48' \
+  ; do
+    _keyword="${_keyword_item%%:*}"
+    _code="${_keyword_item##*:}"
+    # search the entire spec for this keyword and add it if it exists
+    for _substr in $_spec; do
+      [ "$_substr" = "$_keyword" ] && _term_codes="${_term_codes}${_code};"
+    done
+  done
+  IFS="$_old_IFS"
+
+  # strip the trailing ; if needed
+  _term_codes="${_term_codes%%;}"
+
+  [ -n "$_tprint_debug" ] && printf "term codes: %s\n" "$_term_codes" >&2
+
+  # print
+  if [ "$_output_mode" = "bash-prompt" ]; then
+    printf '\[\e[%sm\]%s\[\e[0m\]' "$_term_codes" "$_message"
+  else
+    printf '\e[%sm%s\e[0m' "$_term_codes" "$_message"
+    [ "$_output_mode" != "no-newline" ] && printf '\n'
+  fi
+
+  # it is critical to unset OPTIND here otherwise things will go Trump
+  unset \
+    _code \
+    _fmt \
+    _keyword \
+    _keyword_item \
+    _message \
+    _old_IFS \
+    _opt \
+    _output_mode \
+    _spec \
+    _term_codes \
+    _tprint_debug \
+    OPTIND
+}
+
+# _colortest() {
+#   for bgcolor in "" -bgblack -bgred -bggreen -bgyellow -bgblue -bgmagenta -bgcyan -bgwhite -bgdefault; do
+#     for color in black red green yellow blue magenta cyan white default; do
+#       for attr in "" bright- dim- standout- underscore- blink- reverse-; do
+#         attr_color="${attr}${color}${bgcolor}"
+#         tprint "$attr_color" "$attr_color"
+#       done
+#     done
+#   done
+# }
+
 warn() {
   printf '%s %s\n' "$(date '+%FT%T')" "$*" >&2
 }
@@ -75,7 +196,22 @@ _ifndef HISTTIMEFORMAT '%FT%T : '
 _ifndef LESSHISTFILE "/dev/null"
 _ifndef LESSHISTSIZE "0"
 _ifndef PAGER "less"
-_ifndef PS1 "# ${USER}@${HOSTNAME}:\${PWD} \$ "
+_ifndef PS1 "$(
+  tprint -p dim-underscore '#'
+  tprint -p standout-yellow " \$? "
+  if [ "$(id -u)" = "0" ]; then
+    tprint -p red "\u"
+  else
+    tprint -p standout-green "\u"
+  fi
+  tprint -p dim '@'
+  tprint -p cyan "\${HOSTNAME}"
+  tprint -p dim ':'
+  tprint -p standout-white "\${PWD}"
+  printf ' '
+  tprint -p bright-red '>'
+) "
+_ifndef PS2="\e[33m " # just color the ps2 text, better for copy-paste
 
 _ifndef LANG "en_US.UTF-8"
 _ifndef LC_ALL "en_US.UTF-8"
