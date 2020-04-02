@@ -346,7 +346,8 @@ main() {
     LESSHISTSIZE \
     PAGER \
     PROMPT_COMMAND \
-    PS1
+    PS1 \
+    PS2
 
   _import ~/.bash_local
   _import ~/.profile_local
