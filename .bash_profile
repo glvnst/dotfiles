@@ -374,7 +374,7 @@ main() {
     printf ' '
     tprint -p bright-red '>'
   ) "
-  _ifndef PS2="\e[33m " # just color the ps2 text, better for copy-paste
+  _ifndef PS2 "\e[33m " # just color the ps2 text, better for copy-paste
 
   # os-specific config
   case "$OSTYPE" in
