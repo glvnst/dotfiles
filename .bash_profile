@@ -36,17 +36,6 @@ _printrun() {
   _run "$@"
 }
 
-# _colortest() {
-#   for bgcolor in "" -bgblack -bgred -bggreen -bgyellow -bgblue -bgmagenta -bgcyan -bgwhite -bgdefault; do
-#     for color in black red green yellow blue magenta cyan white default; do
-#       for attr in "" bright- dim- standout- underscore- blink- reverse-; do
-#         attr_color="${attr}${color}${bgcolor}"
-#         tprint "$attr_color" "$attr_color"
-#       done
-#     done
-#   done
-# }
-
 warn() {
   printf '%s %s\n' "$(date '+%FT%T')" "$*" >&2
 }
@@ -62,7 +51,7 @@ die() {
 
 if ! _isfunc tprint; then
   tprint() {
-    # Usage: tprint [-p|-n] spec message [...]
+    # Usage: tprint [-p|-n] [-d] spec message [...]
     # spec is one or more dash-separated keywords such as
     # bright-underscore-magenta-bgblue
     # messge is the message to print
@@ -84,7 +73,7 @@ if ! _isfunc tprint; then
           ;;
 
         *)
-          exit 1
+          warn "tprint: Unknown option ${_opt} IGNORING"
       esac
     done
     shift $(( OPTIND - 1 ))
@@ -170,6 +159,17 @@ if ! _isfunc tprint; then
       _tprint_debug \
       OPTIND
   }
+
+  # _colortest() {
+  #   for bgcolor in "" -bgblack -bgred -bggreen -bgyellow -bgblue -bgmagenta -bgcyan -bgwhite -bgdefault; do
+  #     for color in black red green yellow blue magenta cyan white default; do
+  #       for attr in "" bright- dim- standout- underscore- blink- reverse-; do
+  #         attr_color="${attr}${color}${bgcolor}"
+  #         tprint "$attr_color" "$attr_color"
+  #       done
+  #     done
+  #   done
+  # }
 fi
 
 if ! _isfunc cdwd; then
@@ -374,6 +374,21 @@ main() {
     tprint -p bright-red '>'
   ) "
   _ifndef PS2="\e[33m " # just color the ps2 text, better for copy-paste
+
+  # os-specific config
+  case "$OSTYPE" in
+    darwin*)
+      [ -n "$NOCOLOR" ] || export CLICOLOR=1
+      ;;
+
+    linux*)
+      true
+      ;;
+
+    *)
+      true
+      ;;
+  esac
 
   _ifndef LANG "en_US.UTF-8"
   _ifndef LC_ALL "en_US.UTF-8"
