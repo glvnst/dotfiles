@@ -379,6 +379,8 @@ main() {
   case "$OSTYPE" in
     darwin*)
       [ -n "$NOCOLOR" ] || export CLICOLOR=1
+      export SHELL_SESSION_HISTORY=0
+
       ;;
 
     linux*)
