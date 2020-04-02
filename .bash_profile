@@ -317,7 +317,9 @@ if ! _isfunc pre_exec; then
 
     # Update terminal window title
     _last_command="$(history 1)"
-    printf '\e]0;%s\a' "${USER}@${HOSTNAME}:${PWD} # ${_last_command##*:}"
+    _last_command="${_last_command##*:}"
+    _last_command="${_last_command%%$'\n'*}"
+    printf '\e]0;%s\a' "${USER}@${HOSTNAME}:${PWD} # ${_last_command}"
 
     # Disable the pre_exec function until the next prompt
     # We do this because the debug trap gets caled before
