@@ -159,17 +159,6 @@ if ! _isfunc tprint; then
       _tprint_debug \
       OPTIND
   }
-
-  # _colortest() {
-  #   for bgcolor in "" -bgblack -bgred -bggreen -bgyellow -bgblue -bgmagenta -bgcyan -bgwhite -bgdefault; do
-  #     for color in black red green yellow blue magenta cyan white default; do
-  #       for attr in "" bright- dim- standout- underscore- blink- reverse-; do
-  #         attr_color="${attr}${color}${bgcolor}"
-  #         tprint "$attr_color" "$attr_color"
-  #       done
-  #     done
-  #   done
-  # }
 fi
 
 if ! _isfunc cdwd; then
@@ -286,6 +275,98 @@ if ! _isfunc fmt_duration; then
 
     unset _increment _label _labeled_increments _labels _plural_label \
       _quantity _result _seconds _singular_label
+  }
+fi
+
+if ! _isfunc source_find; then
+  source_find() {
+    _search_dir="$1"; shift
+    if [ -z "$_search_dir" ]; then
+      warn 'source_find: requires a search directory argument cannot continue'
+      return 1
+    fi
+    if [ -z "$*" ]; then
+      warn "source_find: requires find arguments (for example: -name '*.py')" \
+        "cannot continue"
+      return 1
+    fi
+
+    # temp redirecting outputs so i can grep-out some stderr output
+    # via https://unix.stackexchange.com/a/3540
+    { find "$_search_dir" \
+      -not \
+      '(' '(' \
+        -name 'node_modules' \
+        -or -name '.DS_Store' \
+        -or -name 'vendor' \
+        -or -name '.git' \
+        -or -name '.npm' \
+        -or -name 'venv' \
+        -or -name 'site-packages' \
+        -or -name '.idea' \
+        -or -name 'restore' \
+      ')' -prune ')' \
+      -type f \
+      "$@" \
+      -print \
+      2>&1 1>&3 \
+      | grep -vF 'Operation not permitted'; \
+    } 3>&1
+  }
+fi
+
+if ! _isfunc dockerfilegrep; then
+  dockerfilegrep() {
+    if [ -z "$*" ]; then
+      warn "grep arguments required. cannot continue"
+      return 1
+    fi
+    source_find "." \
+      -name 'Dockerfile' \
+    | tr '\n' '\0' \
+    | xargs -0 grep "$@"
+  }
+fi
+
+if ! _isfunc composefilegrep; then
+  composefilegrep() {
+    if [ -z "$*" ]; then
+      warn "grep arguments required. cannot continue"
+      return 1
+    fi
+    source_find "." \
+      '(' \
+        -name 'docker-compose.yml' \
+        -or -name 'docker-compose.*.yml' \
+      ')' \
+    | tr '\n' '\0' \
+    | xargs -0 grep "$@"
+  }
+fi
+
+if ! _isfunc pygrep; then
+  pygrep() {
+    if [ -z "$*" ]; then
+      warn "grep arguments required. cannot continue"
+      return 1
+    fi
+    source_find '.' \
+      -name '*.py' \
+    | tr '\n' '\0' \
+    | xargs -0 grep "$@"
+  }
+fi
+
+if ! _isfunc shgrep; then
+  shgrep() {
+    if [ -z "$*" ]; then
+      warn "grep arguments required. cannot continue"
+      return 1
+    fi
+    source_find '.' \
+      -name '*.sh' \
+    | tr '\n' '\0' \
+    | xargs -0 grep "$@"
   }
 fi
 
@@ -441,6 +522,8 @@ main() {
   _PRE_EXEC_ENABLE=""
   PROMPT_COMMAND="pre_prompt"
   trap pre_exec DEBUG
+
+  unset main
 }
 
 [ -n "$IMPORT" ] || main "$@"
