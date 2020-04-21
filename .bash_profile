@@ -189,7 +189,7 @@ if ! _isfunc chop; then
    chop() {
       # this is a shell function instead of an alias so that $COLUMNS is
       # evaluated at runtime, so a changing window width is supported
-      cut -c "1-${COLUMNS}"
+      expand | cut -c "1-${COLUMNS}"
    }
 fi
 
