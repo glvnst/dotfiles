@@ -40,23 +40,21 @@ main() {
       existing_target="$(readlink "$link_path")"
 
       if [ "$existing_target" = "$link_target" ]; then
-        printf '%s exists and points to the right place\n' "$link_path"
+        warn "${link_path} exists and points to the right place"
         continue
       fi
 
-      printf "%s exists but points to %s. re-linking\n" \
-        "$link_path" \
-        "$existing_target"
-      rm -v "${link_path}" | sed 's/^/rm: /'
+      warn "${link_path} exists but points to ${existing_target}, unlinking"
+      rm -- "${link_path}" || die "could not unlink ${link_path}"
     else
       if [ -e "$link_path" ]; then
-        printf "%s exists but is NOT a symlink, skipping" "$link_path"
+        warn "${link_path} exists but is NOT a symlink, skipping"
         continue
       fi
     fi
 
-    /bin/ln -s -v "$link_target" "$link_path" | sed 's/^/ln: /'
-    printf '\n'
+    /bin/ln -s "$link_target" "$link_path" \
+    || dies "could not link ${link_path}"
   done
 }
 
