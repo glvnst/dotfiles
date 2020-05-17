@@ -202,7 +202,7 @@ if ! _isfunc readcert; then
       _action="_print"
     fi
 
-    $_action openssl x509 -text -issuer -subject -dates -hash -fingerprint -in
+    $_action openssl x509 -text -issuer -subject -dates -hash -fingerprint -in "$@"
 
     unset _action
   }
