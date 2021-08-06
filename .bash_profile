@@ -23,6 +23,10 @@ _isfunc() {
   # [ "$_type_last_word" = "function" ]
 }
 
+_isexec() {
+  [ "$(type -t "$1")" = "file" ]
+}
+
 _print() {
   printf '%s\n' "$*"
 }
@@ -41,12 +45,12 @@ warn() {
 }
 
 die() {
-  warn "$* EXITING"
+  warn 'FATAL:' "$@"
   exit 1
 }
 
 #
-# shell functions
+# support functions
 #
 
 if ! _isfunc tprint; then
@@ -164,19 +168,7 @@ fi
 if ! _isfunc cdwd; then
   cdwd() {
     # cdwd: cd to the current working directory
-    #
-    # the wd can be deleted by automation, cdwd gets you back to what remains of it
-    # nobody@example.com:/Users/nobody $ mkdir -p one/two/three && cd one/two/three/
-    #
-    # now to pull the rug out from under our feet...
-    # nobody@example.com:/Users/nobody/one/two/three $ (cd ~/one && rm -r two)
-    # nobody@example.com:/Users/nobody/one/two/three $ pwd
-    # /Users/nobody/one/two/three
-    # nobody@example.com:/Users/nobody/one/two/three $ ls ~/one
-    # nobody@example.com:/Users/nobody/one/two/three $ cdwd
-    # nobody@example.com:/Users/nobody/one $ pwd
-    # /Users/nobody/one
-
+    # sometimes the rug is pulled out from under us; cdwd gets back there
     if [ -n "$1" ]; then
       cd -- "$1"   2>/dev/null || cdwd "$(dirname "$1")"
     else
@@ -185,34 +177,6 @@ if ! _isfunc cdwd; then
   }
 fi
 
-if ! _isfunc chop; then
-   chop() {
-      # this is a shell function instead of an alias so that $COLUMNS is
-      # evaluated at runtime, so a changing window width is supported
-      expand | cut -c "1-${COLUMNS}"
-   }
-fi
-
-if ! _isfunc readcert; then
-  readcert() {
-    if [ -n "$*" ]; then
-      _action="_printrun"
-    else
-      warn "need a path to a cert to read/dump"
-      _action="_print"
-    fi
-
-    $_action openssl x509 -text -issuer -subject -dates -hash -fingerprint -in "$@"
-
-    unset _action
-  }
-fi
-
-if ! _isfunc dumpcert; then
-  dumpcert() {
-    readcert "$@"
-  }
-fi
 
 if ! _isfunc fmt_duration; then
   fmt_duration() {
@@ -278,97 +242,6 @@ if ! _isfunc fmt_duration; then
   }
 fi
 
-if ! _isfunc source_find; then
-  source_find() {
-    _search_dir="$1"; shift
-    if [ -z "$_search_dir" ]; then
-      warn 'source_find: requires a search directory argument cannot continue'
-      return 1
-    fi
-    if [ -z "$*" ]; then
-      warn "source_find: requires find arguments (for example: -name '*.py')" \
-        "cannot continue"
-      return 1
-    fi
-
-    # temp redirecting outputs so i can grep-out some stderr output
-    # via https://unix.stackexchange.com/a/3540
-    { find "$_search_dir" \
-      -not \
-      '(' '(' \
-        -name 'node_modules' \
-        -or -name '.DS_Store' \
-        -or -name 'vendor' \
-        -or -name '.git' \
-        -or -name '.npm' \
-        -or -name 'venv' \
-        -or -name 'site-packages' \
-        -or -name '.idea' \
-        -or -name 'restore' \
-      ')' -prune ')' \
-      -type f \
-      "$@" \
-      -print \
-      2>&1 1>&3 \
-      | grep -vF 'Operation not permitted'; \
-    } 3>&1
-  }
-fi
-
-if ! _isfunc dockerfilegrep; then
-  dockerfilegrep() {
-    if [ -z "$*" ]; then
-      warn "grep arguments required. cannot continue"
-      return 1
-    fi
-    source_find "." \
-      -name 'Dockerfile' \
-    | tr '\n' '\0' \
-    | xargs -0 grep "$@"
-  }
-fi
-
-if ! _isfunc composefilegrep; then
-  composefilegrep() {
-    if [ -z "$*" ]; then
-      warn "grep arguments required. cannot continue"
-      return 1
-    fi
-    source_find "." \
-      '(' \
-        -name 'docker-compose.yml' \
-        -or -name 'docker-compose.*.yml' \
-      ')' \
-    | tr '\n' '\0' \
-    | xargs -0 grep "$@"
-  }
-fi
-
-if ! _isfunc pygrep; then
-  pygrep() {
-    if [ -z "$*" ]; then
-      warn "grep arguments required. cannot continue"
-      return 1
-    fi
-    source_find '.' \
-      -name '*.py' \
-    | tr '\n' '\0' \
-    | xargs -0 grep "$@"
-  }
-fi
-
-if ! _isfunc shgrep; then
-  shgrep() {
-    if [ -z "$*" ]; then
-      warn "grep arguments required. cannot continue"
-      return 1
-    fi
-    source_find '.' \
-      -name '*.sh' \
-    | tr '\n' '\0' \
-    | xargs -0 grep "$@"
-  }
-fi
 
 #
 # prompts and window titles
@@ -517,6 +390,228 @@ main() {
     "unixdate=date '+%s'" \
     "unixtime=unixdate" \
     "sl=ls" \
+
+  #
+  # interactive utility functions
+  #
+
+  if ! _isfunc source_find; then
+    source_find() {
+      _search_dir="$1"; shift
+      if [ -z "$_search_dir" ]; then
+        warn 'source_find: requires a search directory argument cannot continue'
+        return 1
+      fi
+      if [ -z "$*" ]; then
+        warn "source_find: requires find arguments (for example: -name '*.py')" \
+          "cannot continue"
+        return 1
+      fi
+
+      # temp redirecting outputs so i can grep-out some stderr output
+      # via https://unix.stackexchange.com/a/3540
+      { find "$_search_dir" \
+        -not \
+        '(' '(' \
+          -name 'node_modules' \
+          -or -name '.DS_Store' \
+          -or -name 'vendor' \
+          -or -name '.git' \
+          -or -name '.npm' \
+          -or -name 'venv' \
+          -or -name 'site-packages' \
+          -or -name '.idea' \
+          -or -name 'restore' \
+        ')' -prune ')' \
+        -type f \
+        "$@" \
+        -print \
+        2>&1 1>&3 \
+        | grep -vF 'Operation not permitted'; \
+      } 3>&1
+    }
+  fi
+
+  if ! _isfunc dockerfilegrep; then
+    dockerfilegrep() {
+      if [ -z "$*" ]; then
+        warn "grep arguments required. cannot continue"
+        return 1
+      fi
+      source_find "." \
+        -name 'Dockerfile' \
+      | tr '\n' '\0' \
+      | xargs -0 grep "$@"
+    }
+  fi
+
+  if ! _isfunc composefilegrep; then
+    composefilegrep() {
+      if [ -z "$*" ]; then
+        warn "grep arguments required. cannot continue"
+        return 1
+      fi
+      source_find "." \
+        '(' \
+          -name 'docker-compose.yml' \
+          -or -name 'docker-compose.*.yml' \
+        ')' \
+      | tr '\n' '\0' \
+      | xargs -0 grep "$@"
+    }
+  fi
+
+  if ! _isfunc pygrep; then
+    pygrep() {
+      if [ -z "$*" ]; then
+        warn "grep arguments required. cannot continue"
+        return 1
+      fi
+      source_find '.' \
+        -name '*.py' \
+      | tr '\n' '\0' \
+      | xargs -0 grep "$@"
+    }
+  fi
+
+  if ! _isfunc shgrep; then
+    shgrep() {
+      if [ -z "$*" ]; then
+        warn "grep arguments required. cannot continue"
+        return 1
+      fi
+      source_find '.' \
+        -name '*.sh' \
+      | tr '\n' '\0' \
+      | xargs -0 grep "$@"
+    }
+  fi
+
+  if ! _isfunc venv; then
+    venv() {
+      if ! type deactivate >/dev/null 2>&1; then
+        deactivate
+        return
+      fi
+
+      if [ -d 'venv' ]; then
+        # shellcheck source=/dev/null
+        source venv/bin/activate
+        return
+      fi
+
+      if ! [ -a 'venv' ]; then
+        python3 -m venv ./venv || return 1
+        # shellcheck source=/dev/null
+        source ./venv/bin/activate || return 1
+        pip install --upgrade pip || return 1
+        return 0
+      fi
+    }
+  fi
+
+  if ! _isfunc punt; then
+    # copy and paste files between terminal windows;
+    # usage: punt file_or_dir [..]
+    # it prints a blob of base64 to the terminal. copy and paste it into another
+    # terminal window. the files appear. finding the platform's correct base64
+    # decode argument is the hardest part
+    punt() {
+      if [ "$1" = '-h' ] || [ "$1" = '--help' ]; then
+        printf '%s\n' \
+          "Usage: punt [file_or_dir [..]]" \
+          "punt prints a base64 encoded tar file of the files/directories you" \
+          "give it. it wraps this in a convenient copy-and-pastable here-doc" \
+          "which you can use to copy and paste files between machines. if you" \
+          "call punt with no arguments it prints the punt function itself" \
+          "so that you can easily share it with remote machines"
+        return 1
+      fi
+      if [ ! -e "$1" ]; then
+        # print the punt function itself -- in case you want to use it on other
+        # machines
+        type punt | expand | grep -Ev "^punt is a function$"
+        return
+      fi
+      printf '\n'
+      printf '%s' \
+        ' (' \
+        ' if (base64 --decode </dev/null 2>/dev/null); then' \
+        '  base64 --decode | tar -xvzf -;' \
+        ' elif (base64 -d </dev/null 2>/dev/null); then' \
+        '  base64 -d | tar -xvzf -;' \
+        ' else' \
+        '  cat >/dev/null;' \
+        '  return 1;' \
+        " fi; ) <<'_PUNT_'"
+      printf '\n'
+      tar -czf - "$@" 2>/dev/null | base64 | fold -w 80
+      printf '%s\n' '_PUNT_' ''
+    }
+  fi
+
+  if ! _isexec collect && ! _isfunc collect; then
+    collect() {
+      if [ "$1" = '-h' ] || [ "$1" = '--help' ] || [ "$#" -lt 2 ]; then
+        printf '%s\n' \
+          "Usage: collect targetpath sourcepath [...]" \
+          "" \
+          "A combination of mv and mkdir. Creates the given target directory" \
+          "if necessary then moves the given files into the target." \
+          "" \
+          "E.G.:" \
+          "collect pdfs *.pdf ~/Desktop/*.pdf" \
+          ""\
+        >&2
+        return 1
+      fi
+      target=$1; shift
+
+      # Make the directory if necessary
+      [ -d "$target" ] \
+        || mkdir -p -- "$target" \
+        || die "couldn't create target directory ${target}"
+
+      # collect the things into the thing
+      mv -i -- "$@" "${target}/" \
+        || die "couldn't move the specified items into ${target}"
+    }
+  fi
+
+  if ! _isfunc collectd; then
+    collectd() {
+      collect "$@" && cd "$1" || return 1
+    }
+  fi
+
+  if ! _isfunc chop; then
+    chop() {
+        # this is a shell function instead of an alias so that $COLUMNS is
+        # evaluated at runtime, so a changing window width is supported
+        expand | cut -c "1-${COLUMNS}"
+    }
+  fi
+
+  if ! _isfunc readcert; then
+    readcert() {
+      if [ -n "$*" ]; then
+        _action="_printrun"
+      else
+        warn "need a path to a cert to read/dump"
+        _action="_print"
+      fi
+
+      $_action openssl x509 -text -issuer -subject -dates -hash -fingerprint -in "$@"
+
+      unset _action
+    }
+  fi
+
+  if ! _isfunc dumpcert; then
+    dumpcert() {
+      readcert "$@"
+    }
+  fi
 
   _PRE_EXEC_SECONDS=$SECONDS
   _PRE_EXEC_ENABLE=""
