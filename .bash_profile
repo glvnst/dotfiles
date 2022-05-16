@@ -534,7 +534,7 @@ main() {
     tprint -p dim '@'
     tprint -p cyan "\${HOSTNAME}"
     tprint -p dim ':'
-    tprint -p standout-white "\${PWD}"
+    tprint -p standout-white "\w"
     printf ' '
     tprint -p bright-red '> '
   )
