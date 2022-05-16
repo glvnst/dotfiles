@@ -1,0 +1,4 @@
+# use with this gitconfig syntax:
+# [core]
+#   excludesfile = ~/.gitignore_global
+.DS_Store
