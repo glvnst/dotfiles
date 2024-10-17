@@ -3,10 +3,9 @@
 cdwd() {
   # cdwd: cd to the current working directory
   # sometimes the rug is pulled out from under us; cdwd gets back there
-  if [ -n "$1" ]; then
-    cd -- "$1"   2>/dev/null || cdwd "$(dirname "$1")"
-  else
-    cd -- "$PWD" 2>/dev/null || cdwd "$(dirname "$PWD")"
-  fi
+  cdwd_dir="${1:-$PWD}"
+  while ! cd -- "$cdwd_dir" 2>/dev/null; do
+    cdwd_dir=$(dirname "$cdwd_dir")
+  done
   pwd
 }
