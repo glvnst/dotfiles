@@ -27,6 +27,11 @@ die() {
   exit 1
 }
 
+logrun() {
+  warn "$@"
+  "$@"
+}
+
 #
 # support functions
 #
@@ -154,11 +159,13 @@ main() {
   #
 
   alias \
-    "..=cd .." \
-    "...=cd ../.." \
-    "....=cd ../../.." \
+    'sbsdiff=diff --side-by-side --color=auto -W "$COLUMNS"' \
     ".....=cd ../../../.." \
+    "....=cd ../../.." \
+    "...=cd ../.." \
+    "..=cd .." \
     "dc=docker compose" \
+    "df.=df -h ." \
     "dl=pushd ~/Downloads/" \
     "dt=pushd ~/Desktop/" \
     "dumpcert=readcert" \
@@ -179,7 +186,6 @@ main() {
     "plcat=plutil -p" \
     "push-branch=git push -u origin HEAD" \
     "readcert=openssl x509 -text -issuer -subject -dates -hash -fingerprint -in" \
-    "sbsdiff=diff --side-by-side --color=auto -W \"$COLUMNS\"" \
     "sl=ls" \
     "unixdate=date '+%s'" \
     "unixtime=unixdate" \

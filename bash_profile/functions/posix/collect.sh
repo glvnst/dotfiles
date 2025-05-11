@@ -21,7 +21,7 @@ collect() {
     || mkdir -p -- "$target" \
     || die "couldn't create target directory ${target}"
 
-  # collect the things into the thing
+  # collect the things into the directory
   mv -iv -- "$@" "${target}/" \
     || die "couldn't move the specified items into ${target}"
 }

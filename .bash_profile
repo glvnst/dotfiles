@@ -287,25 +287,39 @@ tprint() {
 # inserted from bash_profile/functions/bash/venv.sh
 
 venv() {
+  local venv_dirname=".venv"
+
   if type deactivate >/dev/null 2>&1; then
     warn "deactivating current venv"
     deactivate
     return
   fi
 
-  if [ -d 'venv' ]; then
+  if [ -d "${venv_dirname}" ]; then
     warn "activating existing venv"
     # shellcheck source=/dev/null
-    source venv/bin/activate
+    source "${venv_dirname}/bin/activate"
     return
   fi
 
-  if ! [ -a 'venv' ]; then
+  if ! [ -a "${venv_dirname}" ]; then
     warn "creating, activating, and updating new venv"
-    python3 -m venv ./venv || return 1
+    logrun python3 -m venv "${venv_dirname}" || return 1
     # shellcheck source=/dev/null
-    source ./venv/bin/activate || return 1
-    pip install --upgrade pip || return 1
+    source "${venv_dirname}/bin/activate" || return 1
+    logrun pip install --upgrade pip || return 1
+
+    set --
+    for requirements_file in requirements*txt; do
+      if [ -f "${requirements_file}" ]; then
+        set -- "$@" -r "${requirements_file}"
+      fi
+    done
+    if [ "$#" != "0" ]; then
+      warn "installing deps from requirements files"
+      logrun pip install "$@" || return 2
+    fi
+
     return 0
   fi
 }
@@ -316,14 +330,12 @@ venv() {
 cdwd() {
   # cdwd: cd to the current working directory
   # sometimes the rug is pulled out from under us; cdwd gets back there
-  if [ -n "$1" ]; then
-    cd -- "$1"   2>/dev/null || cdwd "$(dirname "$1")"
-  else
-    cd -- "$PWD" 2>/dev/null || cdwd "$(dirname "$PWD")"
-  fi
+  cdwd_dir="${1:-$PWD}"
+  while ! cd -- "$cdwd_dir" 2>/dev/null; do
+    cdwd_dir=$(dirname "$cdwd_dir")
+  done
   pwd
 }
-
 
 # inserted from bash_profile/functions/posix/chop.sh
 
@@ -357,7 +369,7 @@ collect() {
     || mkdir -p -- "$target" \
     || die "couldn't create target directory ${target}"
 
-  # collect the things into the thing
+  # collect the things into the directory
   mv -iv -- "$@" "${target}/" \
     || die "couldn't move the specified items into ${target}"
 }
@@ -371,15 +383,20 @@ collectd() {
 }
 
 
-# inserted from bash_profile/functions/posix/composefilegrep.sh
+# inserted from bash_profile/functions/posix/composegrep.sh
 
-composefilegrep() {
+composegrep() {
   if [ -z "$*" ]; then
     warn "grep arguments required. cannot continue"
     return 1
   fi
   source_find "." \
-    '(' -name "docker-compose.yml" -or -name "docker-compose.*.yml" ')' \
+    '(' \
+      -name "docker-compose.yml" \
+      -or -name "docker-compose.*.yml" \
+      -or -name "compose.yml" \
+      -or -name "compose.*.yml" \
+    ')' \
     -print0 \
   | xargs -0 -r grep -E "$@"
 }
@@ -468,6 +485,21 @@ shgrep() {
   | xargs -0 -r grep -E "$@"
 }
 
+
+# inserted from bash_profile/functions/posix/workflowgrep.sh
+
+workflowgrep() {
+  if [ -z "$*" ]; then
+    warn "grep arguments required. cannot continue"
+    return 1
+  fi
+  source_find '.' \
+    -name '*.y*ml' \
+    -path '*/.git*/workflows/*' \
+    -print0 \
+  | xargs -0 -r rg "$@"
+}
+
 # I-N-S-E-R-T - E-N-D
 
 #
@@ -486,6 +518,11 @@ warn() {
 die() {
   warn 'FATAL:' "$@"
   exit 1
+}
+
+logrun() {
+  warn "$@"
+  "$@"
 }
 
 #
@@ -615,11 +652,13 @@ main() {
   #
 
   alias \
-    "..=cd .." \
-    "...=cd ../.." \
-    "....=cd ../../.." \
+    'sbsdiff=diff --side-by-side --color=auto -W "$COLUMNS"' \
     ".....=cd ../../../.." \
+    "....=cd ../../.." \
+    "...=cd ../.." \
+    "..=cd .." \
     "dc=docker compose" \
+    "df.=df -h ." \
     "dl=pushd ~/Downloads/" \
     "dt=pushd ~/Desktop/" \
     "dumpcert=readcert" \
@@ -640,7 +679,6 @@ main() {
     "plcat=plutil -p" \
     "push-branch=git push -u origin HEAD" \
     "readcert=openssl x509 -text -issuer -subject -dates -hash -fingerprint -in" \
-    "sbsdiff=diff --side-by-side --color=auto -W \"$COLUMNS\"" \
     "sl=ls" \
     "unixdate=date '+%s'" \
     "unixtime=unixdate" \
